@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpotConnect - 스마트 스탬프</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #fbbf24;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 380px;
+            background: var(--card);
+            padding: 2.5rem 1.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.6rem; }
+        p { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
+
+        /* 입력 폼 */
+        .input-group { margin-bottom: 1rem; text-align: left; }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-top: 5px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input:focus { border-color: var(--primary); }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .toggle-btn {
+            background: none;
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 400;
+            text-decoration: underline;
+        }
+
+        /* 스탬프 그리드 */
+        .stamp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 2rem 0;
+        }
+        .stamp-slot {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #cbd5e1;
+            font-size: 1.2rem;
+            border: 2px dashed #cbd5e1;
+        }
+        .stamp-slot.active {
+            background: var(--secondary);
+            border: none;
+            color: white;
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); }
+            100% { transform: scale(1); }
+        }
+
+        #stampView { display: none; }
+        .loading { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="authView">
+        <h1 id="viewTitle">SpotConnect</h1>
+        <p id="viewDesc">매장 방문 스탬프를 적립하세요</p>
+        
+        <input type="text" id="userId" placeholder="아이디를 입력하세요">
+        <input type="password" id="userPw" placeholder="비밀번호를 입력하세요">
+        
+        <button onclick="handleAuth()" id="mainBtn">로그인</button>
+        <button class="toggle-btn" onclick="toggleMode()" id="subBtn">계정이 없으신가요? 회원가입</button>
+    </div>
+
+    <div id="stampView">
+        <h1 style="font-size: 1.2rem;">안녕하세요, <span id="userName" style="color:#1e293b"></span>님!</h1>
+        <p>현재 보유하신 스탬프입니다.</p>
+        
+        <div class="stamp-grid" id="stampGrid">
+            </div>
+
+        <div style="background:#eff6ff; padding:15px; border-radius:12px; font-size:0.85rem; color:var(--primary)">
+            <strong>💡 혜택 안내</strong><br>10개를 모두 모으면 쿠폰이 발행됩니다!
+        </div>
+        <button onclick="location.reload()" style="background:#f1f5f9; color:#64748b; margin-top:20px;">로그아웃</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_0Gggmkd082OX-8Egm87XfaFfETBY4TCQwqngP8y5Nsx5QNT2HzVDoHBDJV7JvAqW/exec";
+    let isLoginMode = true;
+
+    function toggleMode() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('viewTitle').innerText = isLoginMode ? "SpotConnect" : "회원가입";
+        document.getElementById('mainBtn').innerText = isLoginMode ? "로그인" : "가입하기";
+        document.getElementById('subBtn').innerText = isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있나요? 로그인";
+    }
+
+    async function handleAuth() {
+        const id = document.getElementById('userId').value;
+        const password = document.getElementById('userPw').value;
+        const action = isLoginMode ? "login" : "signup";
+
+        if(!id || !password) return alert("아이디와 비밀번호를 모두 입력해 주세요.");
+
+        // 로딩 상태 표시
+        const btn = document.getElementById('mainBtn');
+        btn.innerText = "처리 중...";
+        document.body.classList.add('loading');
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action, id, password })
+            });
+            
+            const data = await response.json();
+
+            if (data.result === "success") {
+                if (isLoginMode) {
+                    showStampView(data.id, data.stamps);
+                } else {
+                    alert("회원가입이 완료되었습니다! 로그인해 주세요.");
+                    toggleMode();
+                }
+            } else {
+                alert(data.message || "오류가 발생했습니다.");
+            }
+        } catch (e) {
+            alert("서버 연동에 실패했습니다. 배포 설정을 확인하세요.");
+        } finally {
+            btn.innerText = isLoginMode ? "로그인" : "가입하기";
+            document.body.classList.remove('loading');
+        }
+    }
+
+    function showStampView(id, stamps) {
+        document.getElementById('authView').style.display = 'none';
+        document.getElementById('stampView').style.display = 'block';
+        document.getElementById('userName').innerText = id;
+
+        const grid = document.getElementById('stampGrid');
+        grid.innerHTML = "";
+        
+        // 9개 그리드 생성 예시
+        for(let i = 1; i <= 9; i++) {
+            const slot = document.createElement('div');
+            slot.className = `stamp-slot ${i <= stamps ? 'active' : ''}`;
+            slot.innerText = i <= stamps ? "✓" : i;
+            grid.appendChild(slot);
+        }
+    }
+
+window.onload = function() {
+    // 1. URL 파라미터 확인 (예: ?mode=scan)
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    
+    // 2. 로그인 정보 확인 (로컬 스토리지 등에 저장되어 있어야 함)
+    const savedId = localStorage.getItem('spotConnectId');
+
+    if (mode === 'scan') {
+        if (savedId) {
+            autoAddStamp(savedId);
+        } else {
+            alert("로그인이 필요합니다. 로그인 후 다시 스캔해 주세요.");
+            // 로그인 페이지로 이동하거나 폼 보여주기
+        }
+    }
+};
+
+async function autoAddStamp(id) {
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "addStamp", id: id })
+        });
+        const data = await response.json();
+        
+        if (data.result === "success") {
+            alert("스탬프가 1개 적립되었습니다! 현재: " + data.stamps + "개");
+            showStampView(id, data.stamps); // 화면 업데이트
+            // 적립 후 중복 적립 방지를 위해 URL 파라미터 제거
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    } catch (e) {
+        console.error("적립 실패:", e);
+    }
+}
+
+// 로그인 성공 시 ID를 저장하는 로직 추가 (handleAuth 함수 내부 수정)
+if (data.result === "success" && isLoginMode) {
+    localStorage.setItem('spotConnectId', data.id); // ID 저장
+    showStampView(data.id, data.stamps);
+}
+
+</script>
+</body>
+</html>
