@@ -3,32 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpotConnect - 스마트 스탬프</title>
+    <title>SpotConnect - 스마트 스탬프 & 쿠폰</title>
     <style>
-        :root { --primary: #2563eb; --secondary: #fbbf24; --bg: #f1f5f9; --card: #ffffff; }
-        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; color: #1e293b; }
-        .container { width: 90%; max-width: 380px; background: var(--card); padding: 2.5rem 1.5rem; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); text-align: center; }
+        :root {
+            --primary: #2563eb;
+            --secondary: #fbbf24;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 380px;
+            background: var(--card);
+            padding: 2.5rem 1.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+        }
+
         h1 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.6rem; }
-        p { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
-        input { width: 100%; padding: 14px; margin-top: 10px; border: 1.5px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; margin-top: 15px; }
-        .toggle-btn { background: none; color: #64748b; font-size: 0.85rem; text-decoration: underline; margin-top: 10px; border: none; cursor: pointer; }
-        .stamp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 2rem 0; }
-        .stamp-slot { aspect-ratio: 1; background: #f1f5f9; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #cbd5e1; border: 2px dashed #cbd5e1; }
-        .stamp-slot.active { background: var(--secondary); border: none; color: white; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        #stampView { display: none; }
+        p { color: var(--text-sub); font-size: 0.9rem; margin-bottom: 2rem; }
+
+        /* 입력 폼 */
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input:focus { border-color: var(--primary); }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.8; }
+
+        .toggle-btn {
+            background: none;
+            color: var(--text-sub);
+            font-size: 0.85rem;
+            text-decoration: underline;
+            border: none;
+            margin-top: 10px;
+        }
+
+        /* 스탬프 그리드 */
+        .stamp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 2rem 0;
+        }
+        .stamp-slot {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #cbd5e1;
+            border: 2px dashed #cbd5e1;
+            font-size: 1.1rem;
+        }
+        .stamp-slot.active {
+            background: var(--secondary);
+            border: none;
+            color: white;
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
         @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 100; justify-content: center; align-items: center; font-weight: bold; color: var(--primary); }
+
+        /* 쿠폰 영역 */
+        #couponArea {
+            display: none;
+            margin-top: 20px;
+            padding: 1.2rem;
+            background: #fffbeb;
+            border: 2px solid var(--secondary);
+            border-radius: 16px;
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .use-btn {
+            background: var(--secondary);
+            color: #92400e;
+            margin-top: 10px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+        /* 로딩 레이어 */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.85);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        #authView, #stampView { display: none; }
     </style>
 </head>
 <body>
 
-<div id="loading" class="loading-overlay">처리 중입니다...</div>
+<div id="loading" class="loading-overlay">
+    <div>처리 중입니다...</div>
+    <button onclick="showLoading(false)" style="width:auto; padding:5px 10px; font-size:12px; background:#ccc; margin-top:10px;">취소</button>
+</div>
 
 <div class="container">
-    <div id="authView">
+    <div id="authView" style="display: block;">
         <h1 id="viewTitle">SpotConnect</h1>
-        <p id="viewDesc">매장 방문 스탬프를 적립하세요</p>
+        <p id="viewDesc">방문 스탬프를 적립하고 혜택을 받으세요</p>
         <input type="text" id="userId" placeholder="아이디">
         <input type="password" id="userPw" placeholder="비밀번호">
         <button onclick="handleAuth()" id="mainBtn">로그인</button>
@@ -36,13 +156,21 @@
     </div>
 
     <div id="stampView">
-        <h1>안녕하세요, <span id="userName"></span>님!</h1>
-        <p>현재 보유하신 스탬프입니다.</p>
+        <h1 style="font-size: 1.3rem;"><span id="userName" style="color:var(--text-main)"></span>님</h1>
+        <p>현재 보유하신 스탬프입니다</p>
+        
         <div class="stamp-grid" id="stampGrid"></div>
-        <div style="background:#eff6ff; padding:15px; border-radius:12px; font-size:0.85rem; color:var(--primary)">
-            <strong>🎁 혜택 안내</strong><br>10개를 모두 모으면 쿠폰이 발행됩니다!
+
+        <div id="couponArea">
+            <strong style="color: #92400e;">🎁 무료 쿠폰이 도착했습니다!</strong>
+            <button onclick="useCoupon()" class="use-btn">아메리카노 쿠폰 사용하기</button>
         </div>
-        <button onclick="logout()" style="background:#f1f5f9; color:#64748b; margin-top:20px;">로그아웃</button>
+
+        <div style="background:#eff6ff; padding:15px; border-radius:12px; font-size:0.85rem; color:var(--primary); margin-top:15px;">
+            10개를 모으면 자동으로 쿠폰이 발행됩니다.
+        </div>
+        
+        <button onclick="logout()" style="background:#f1f5f9; color:var(--text-sub); margin-top:20px;">로그아웃</button>
     </div>
 </div>
 
@@ -50,142 +178,148 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZdQkt2MH-ffowPQv4nQ6GFMmVcfVnEhkAxQNMJ_eH2pMHfPoWgGiIgIPjj_sUPvg/exec";
     let isLoginMode = true;
 
-window.onload = async function() {
-    const savedId = localStorage.getItem('spotConnectId');
-    const urlParams = new URLSearchParams(window.location.search);
-    const isScanMode = urlParams.get('mode') === 'scan';
+    // 페이지 로드 시 실행
+    window.onload = async function() {
+        const savedId = localStorage.getItem('spotConnectId');
+        const urlParams = new URLSearchParams(window.location.search);
+        const isScanMode = urlParams.get('mode') === 'scan';
 
-    if (savedId) {
-        // 이미 아이디가 있다면 일단 스탬프 화면 표시 (개수는 0으로 시작)
-        showStampView(savedId, 0); 
-        
-        if (isScanMode) {
-            await addStamp(savedId);
-        } else {
-            // 일반 접속 시 로딩바 없이 백그라운드 동기화
-            syncUserInfo(savedId);
+        if (savedId) {
+            showStampView(savedId, 0); // 즉시 화면 전환
+            if (isScanMode) await addStamp(savedId);
+            else syncUserInfo(savedId);
+        } else if (isScanMode) {
+            alert("로그인이 필요합니다. 로그인 후 스탬프가 자동 적립됩니다.");
         }
-    } else if (isScanMode) {
-        alert("로그인이 필요합니다. 로그인 후 자동으로 스탬프가 적립됩니다.");
+    };
+
+    function toggleMode() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('viewTitle').innerText = isLoginMode ? "SpotConnect" : "회원가입";
+        document.getElementById('mainBtn').innerText = isLoginMode ? "로그인" : "가입하기";
+        document.getElementById('subBtn').innerText = isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있나요? 로그인";
     }
-};
 
-// 로그인 및 회원가입 처리 (핵심 수정 부분)
-async function handleAuth() {
-    const id = document.getElementById('userId').value;
-    const password = document.getElementById('userPw').value;
-    const action = isLoginMode ? "login" : "signup";
+    async function handleAuth() {
+        const id = document.getElementById('userId').value;
+        const password = document.getElementById('userPw').value;
+        const action = isLoginMode ? "login" : "signup";
 
-    if(!id || !password) return alert("아이디와 비밀번호를 입력해 주세요.");
-    
-    showLoading(true);
+        if(!id || !password) return alert("입력란을 모두 채워주세요.");
+        showLoading(true);
 
-    try {
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action, id, password })
-        });
-        const data = await response.json();
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action, id, password })
+            });
+            const data = await response.json();
 
-        if (data.result === "success") {
-            if (isLoginMode) {
-                localStorage.setItem('spotConnectId', id);
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('mode') === 'scan') {
-                    // QR 모드라면 적립 함수 실행 (적립 함수 내부에서 로딩 해제 처리함)
-                    await addStamp(id);
+            if (data.result === "success") {
+                if (isLoginMode) {
+                    localStorage.setItem('spotConnectId', id);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('mode') === 'scan') await addStamp(id);
+                    else {
+                        showStampView(id, data.stamps);
+                        showLoading(false);
+                    }
                 } else {
-                    showStampView(id, data.stamps);
-                    showLoading(false); // 일반 로그인이면 여기서 로딩 해제
+                    alert("가입 성공! 로그인을 해주세요.");
+                    toggleMode();
+                    showLoading(false);
                 }
             } else {
-                alert("가입 완료! 로그인을 해주세요.");
-                toggleMode();
+                alert(data.message || "오류가 발생했습니다.");
                 showLoading(false);
             }
-        } else {
-            alert(data.message || "오류가 발생했습니다.");
-            showLoading(false); // 실패 시 로딩 해제
+        } catch (e) {
+            alert("연동 오류가 발생했습니다.");
+            showLoading(false);
         }
-    } catch (e) {
-        alert("서버 통신 오류가 발생했습니다.");
-        showLoading(false); // 에러 시 로딩 해제
     }
-}
 
-// 스탬프 적립 함수 (로딩 해제 보장)
-async function addStamp(id) {
-    showLoading(true);
-    try {
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "addStamp", id: id })
-        });
-        const data = await response.json();
+    async function addStamp(id) {
+        showLoading(true);
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "addStamp", id: id })
+            });
+            const data = await response.json();
+            if (data.result === "success") {
+                alert("🎉 방문 스탬프가 적립되었습니다!");
+                showStampView(id, data.stamps);
+            }
+        } finally {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            showLoading(false);
+        }
+    }
+
+    async function useCoupon() {
+        if (!confirm("직원에게 화면을 보여주셨나요?\n사용 후에는 스탬프 10개가 차감됩니다.")) return;
         
-        if (data.result === "success") {
-            alert("🎉 스탬프 적립 성공!");
-            showStampView(id, data.stamps);
-        } else {
-            alert("적립 실패: " + data.message);
+        const id = localStorage.getItem('spotConnectId');
+        showLoading(true);
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "useCoupon", id: id })
+            });
+            const data = await response.json();
+            if (data.result === "success") {
+                alert("✅ 쿠폰 사용이 완료되었습니다!");
+                updateStampGrid(data.stamps);
+            } else {
+                alert(data.message);
+            }
+        } finally {
+            showLoading(false);
         }
-    } catch (e) {
-        console.error("적립 중 오류 발생");
-    } finally {
-        // 성공하든 실패하든 주소 정리 및 로딩 해제
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showLoading(false); 
     }
-}
 
-// 백그라운드 데이터 동기화
-async function syncUserInfo(id) {
-    try {
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "login", id: id, password: "" })
-        });
-        const data = await response.json();
-        if (data.result === "success") {
-            updateStampGrid(data.stamps);
+    async function syncUserInfo(id) {
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "login", id: id, password: "" })
+            });
+            const data = await response.json();
+            if (data.result === "success") updateStampGrid(data.stamps);
+        } catch (e) {}
+    }
+
+    function showStampView(id, stamps) {
+        document.getElementById('authView').style.display = 'none';
+        document.getElementById('stampView').style.display = 'block';
+        document.getElementById('userName').innerText = id;
+        updateStampGrid(stamps);
+    }
+
+    function updateStampGrid(stamps) {
+        const grid = document.getElementById('stampGrid');
+        const couponArea = document.getElementById('couponArea');
+        grid.innerHTML = "";
+        for(let i = 1; i <= 10; i++) {
+            const slot = document.createElement('div');
+            slot.className = `stamp-slot ${i <= stamps ? 'active' : ''}`;
+            slot.innerText = i <= stamps ? "✓" : i;
+            grid.appendChild(slot);
         }
-    } catch (e) {
-        console.warn("데이터 동기화 실패");
+        couponArea.style.display = (stamps >= 10) ? 'block' : 'none';
     }
-}
 
-function showStampView(id, stamps) {
-    document.getElementById('authView').style.display = 'none';
-    document.getElementById('stampView').style.display = 'block';
-    document.getElementById('userName').innerText = id;
-    updateStampGrid(stamps);
-}
-
-function updateStampGrid(stamps) {
-    const grid = document.getElementById('stampGrid');
-    if (!grid) return;
-    grid.innerHTML = "";
-    for(let i = 1; i <= 10; i++) {
-        const slot = document.createElement('div');
-        slot.className = `stamp-slot ${i <= stamps ? 'active' : ''}`;
-        slot.innerText = i <= stamps ? "✓" : i;
-        grid.appendChild(slot);
+    function logout() {
+        localStorage.removeItem('spotConnectId');
+        window.location.href = window.location.origin + window.location.pathname;
     }
-}
 
-function logout() {
-    localStorage.removeItem('spotConnectId');
-    // 캐시 문제 방지를 위해 완전히 새로고침하며 초기 페이지로 이동
-    window.location.href = window.location.origin + window.location.pathname;
-}
-
-function showLoading(show) {
-    const loading = document.getElementById('loading');
-    if (loading) {
-        loading.style.display = show ? 'flex' : 'none';
+    function showLoading(show) {
+        document.getElementById('loading').style.display = show ? 'flex' : 'none';
     }
-}
 </script>
+
 </body>
 </html>
