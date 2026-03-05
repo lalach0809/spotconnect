@@ -49,44 +49,55 @@
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZdQkt2MH-ffowPQv4nQ6GFMmVcfVnEhkAxQNMJ_eH2pMHfPoWgGiIgIPjj_sUPvg/exec";
     let isLoginMode = true;
+// 1. 페이지 로드 시 실행 로직 개선
+window.onload = async function() {
+    const savedId = localStorage.getItem('spotConnectId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const isScanMode = urlParams.get('mode') === 'scan';
 
-    // 1. 페이지 로드 시 실행 (자동 적립 로직 핵심)
-    window.onload = async function() {
-        const savedId = localStorage.getItem('spotConnectId');
-        const urlParams = new URLSearchParams(window.location.search);
-        const isScanMode = urlParams.get('mode') === 'scan';
-
-        if (savedId) {
-            // 이미 로그인된 경우
-            if (isScanMode) {
-                // QR 모드라면 즉시 적립 시도
-                await addStamp(savedId);
-            } else {
-                // 일반 접속이면 스탬프 정보만 불러오기
-                await fetchUserInfo(savedId);
-            }
-        } else if (isScanMode) {
-            // 로그인 안 됐는데 QR로 들어온 경우
-            alert("로그인이 필요합니다. 로그인 완료 후 자동으로 스탬프가 적립됩니다!");
+    if (savedId) {
+        // 이미 아이디가 있다면 스탬프 화면을 먼저 그려줍니다 (로딩 지연 방지)
+        showStampView(savedId, 0); 
+        
+        if (isScanMode) {
+            // QR 모드일 때만 적립 프로세스 진행
+            await addStamp(savedId);
+        } else {
+            // 일반 접속이면 백그라운드에서 정보만 동기화 (로딩바 없이)
+            syncUserInfo(savedId);
         }
-    };
-
-    function toggleMode() {
-        isLoginMode = !isLoginMode;
-        document.getElementById('viewTitle').innerText = isLoginMode ? "SpotConnect" : "회원가입";
-        document.getElementById('mainBtn').innerText = isLoginMode ? "로그인" : "가입하기";
-        document.getElementById('subBtn').innerText = isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있나요? 로그인";
+    } else if (isScanMode) {
+        alert("로그인이 필요합니다. 로그인 완료 후 자동으로 스탬프가 적립됩니다!");
     }
+};
 
+// [수정] 백그라운드 동기화 함수 (로딩 표시를 하지 않음)
+async function syncUserInfo(id) {
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "login", id: id, password: "" })
+        });
+        const data = await response.json();
+        if (data.result === "success") {
+            updateStampGrid(data.stamps); // 화면의 스탬프 개수만 업데이트
+        } else {
+            logout(); // 정보가 일치하지 않으면 로그아웃 처리
+        }
+    } catch (e) {
+        console.warn("정보 동기화 실패 (오프라인 모드)");
+    }
+}
 
-// 로그인 및 회원가입 처리 함수
+// [수정] 로그인/가입 핸들러
 async function handleAuth() {
     const id = document.getElementById('userId').value;
     const password = document.getElementById('userPw').value;
     const action = isLoginMode ? "login" : "signup";
 
     if(!id || !password) return alert("아이디와 비밀번호를 입력해 주세요.");
-    showLoading(true);
+    
+    showLoading(true); // 여기서만 로딩 표시
 
     try {
         const response = await fetch(SCRIPT_URL, {
@@ -97,22 +108,17 @@ async function handleAuth() {
 
         if (data.result === "success") {
             if (isLoginMode) {
-                // 1. 로그인 성공 시 브라우저에 ID 저장
-                localStorage.setItem('spotConnectId', id); 
+                localStorage.setItem('spotConnectId', id);
                 
-                // 2. 현재 URL에 ?mode=scan 이 있는지 확인
                 const urlParams = new URLSearchParams(window.location.search);
-                const isScanMode = urlParams.get('mode') === 'scan';
-
-                if (isScanMode) {
-                    // QR 스캔 모드라면 바로 적립 함수 호출
-                    await addStamp(id); 
+                if (urlParams.get('mode') === 'scan') {
+                    await addStamp(id); // 적립 프로세스 실행
                 } else {
-                    // 일반 로그인이면 스탬프 화면만 출력
                     showStampView(id, data.stamps);
+                    showLoading(false);
                 }
             } else {
-                alert("가입 완료! 이제 로그인을 해주세요.");
+                alert("가입 완료! 로그인을 해주세요.");
                 toggleMode();
                 showLoading(false);
             }
@@ -121,75 +127,61 @@ async function handleAuth() {
             showLoading(false);
         }
     } catch (e) {
-        alert("서버 통신 오류가 발생했습니다.");
+        alert("서버 통신 오류");
         showLoading(false);
     }
 }
 
-    // 스탬프 적립 함수
-    async function addStamp(id) {
-        showLoading(true);
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "addStamp", id: id })
-            });
-            const data = await response.json();
-            
-            if (data.result === "success") {
-                alert("🎉 스탬프가 적립되었습니다!");
-                showStampView(id, data.stamps);
-                // 적립 후 중복 방지를 위해 URL 파라미터 제거
-                window.history.replaceState({}, document.title, window.location.pathname);
-            } else {
-                // 사용자가 존재하지 않는 등 예외 시 로그인 유도
-                fetchUserInfo(id); 
-            }
-        } catch (e) {
-            console.error("적립 오류:", e);
-        } finally {
-            showLoading(false);
+// [수정] 적립 함수 (적립 성공 후 로딩 해제 확실히)
+async function addStamp(id) {
+    showLoading(true);
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "addStamp", id: id })
+        });
+        const data = await response.json();
+        
+        if (data.result === "success") {
+            alert("🎉 스탬프 적립 성공!");
+            showStampView(id, data.stamps);
         }
+    } catch (e) {
+        console.error("적립 오류");
+    } finally {
+        // 적립 후 파라미터 제거 및 로딩 해제
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showLoading(false);
     }
+}
 
-    // 사용자 정보 불러오기 (로그인 상태 유지용)
-    async function fetchUserInfo(id) {
-        showLoading(true);
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "login", id: id, password: "" }) // 간소화된 체크
-            });
-            const data = await response.json();
-            if(data.result === "success") showStampView(id, data.stamps);
-            else logout();
-        } finally {
-            showLoading(false);
-        }
-    }
+// 화면 전환 및 UI 업데이트 함수들
+function showStampView(id, stamps) {
+    document.getElementById('authView').style.display = 'none';
+    document.getElementById('stampView').style.display = 'block';
+    document.getElementById('userName').innerText = id;
+    updateStampGrid(stamps);
+}
 
-    function showStampView(id, stamps) {
-        document.getElementById('authView').style.display = 'none';
-        document.getElementById('stampView').style.display = 'block';
-        document.getElementById('userName').innerText = id;
-        const grid = document.getElementById('stampGrid');
-        grid.innerHTML = "";
-        for(let i = 1; i <= 10; i++) {
-            const slot = document.createElement('div');
-            slot.className = `stamp-slot ${i <= stamps ? 'active' : ''}`;
-            slot.innerText = i <= stamps ? "✓" : i;
-            grid.appendChild(slot);
-        }
+function updateStampGrid(stamps) {
+    const grid = document.getElementById('stampGrid');
+    grid.innerHTML = "";
+    for(let i = 1; i <= 10; i++) {
+        const slot = document.createElement('div');
+        slot.className = `stamp-slot ${i <= stamps ? 'active' : ''}`;
+        slot.innerText = i <= stamps ? "✓" : i;
+        grid.appendChild(slot);
     }
+}
 
-    function logout() {
-        localStorage.removeItem('spotConnectId');
-        location.href = window.location.pathname; // 깔끔하게 초기화
-    }
+function logout() {
+    localStorage.removeItem('spotConnectId');
+    location.href = window.location.pathname;
+}
 
-    function showLoading(show) {
-        document.getElementById('loading').style.display = show ? 'flex' : 'none';
-    }
-</script>
+function showLoading(show) {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = show ? 'flex' : 'none';
+}</script>
 </body>
 </html>
