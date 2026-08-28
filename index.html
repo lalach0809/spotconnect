@@ -408,8 +408,8 @@
     .modal-content { 
       background: var(--card-bg); 
       width: 100%; 
-      max-width: 620px; 
-      max-height: 88vh; 
+      max-width: 650px; 
+      max-height: 90vh; 
       border-radius: var(--radius); 
       display: flex; 
       flex-direction: column; 
@@ -431,7 +431,7 @@
     .form-group label { font-size: 0.85rem; font-weight: 600; }
     .form-group .hint { font-size: 0.75rem; color: var(--text-muted); margin-top: -2px; }
     .form-control { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
-    textarea.form-control { min-height: 80px; resize: vertical; font-family: inherit; }
+    textarea.form-control { min-height: 75px; resize: vertical; font-family: inherit; }
     
     .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.5rem; background: var(--bg); flex-shrink: 0; }
     .btn { padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; }
@@ -477,7 +477,7 @@
 
   <main class="main-container">
     <div class="app-layout">
-      <!-- 좌측 사이드바: 달력 OR 도서 검색 목록 -->
+      <!-- 좌측 사이드바 -->
       <div class="sidebar-wrapper">
         
         <!-- [모드 1] 달력 컴포넌트 -->
@@ -507,12 +507,10 @@
             <i data-lucide="search" class="search-icon"></i>
             <input type="text" id="bookSearchInput" placeholder="책 제목 또는 챕터 검색..." />
           </div>
-          <ul class="book-tree-list" id="bookTreeList">
-            <!-- 책 목록 및 아코디언 챕터가 렌더링됩니다 -->
-          </ul>
+          <ul class="book-tree-list" id="bookTreeList"></ul>
         </aside>
 
-        <!-- 인기 글 TOP 10 (공통 노출) -->
+        <!-- 인기 글 TOP 10 -->
         <aside class="popular-card">
           <div class="popular-header">
             <i data-lucide="trending-up" style="width: 18px; height: 18px; color: #f59e0b;"></i>
@@ -526,7 +524,7 @@
         </aside>
       </div>
 
-      <!-- 우측 상세 영역 -->
+      <!-- 우측 상세 내용 영역 -->
       <section>
         <div class="time-slot-nav" id="timeSlotNav">
           <button class="slot-btn active" data-slot="morning">
@@ -583,6 +581,14 @@
             <label for="chapterTitle">목차 / 챕터명</label>
             <input type="text" id="chapterTitle" class="form-control" placeholder="목차/챕터명 입력" required />
           </div>
+
+          <!-- ✨ 신규 추가: 본문 요약 -->
+          <div class="form-group">
+            <label for="summary">📖 본문 요약</label>
+            <span class="hint">* 챕터의 핵심 배경 및 전체 줄거리를 요약해 주세요.</span>
+            <textarea id="summary" class="form-control" rows="3" placeholder="본문 핵심 내용을 요약하여 작성하세요"></textarea>
+          </div>
+
           <div class="form-group">
             <label for="insights">💡 핵심 인사이트 Top 3</label>
             <span class="hint">* [ ] 안의 단어는 자동으로 굵게 강조됩니다.</span>
@@ -606,8 +612,7 @@
   </div>
 
   <script>
-    // ✅ 설정된 최신 Google Apps Script Web App URL
-    const API_URL = "https://script.google.com/macros/s/AKfycbyOhKtAOqQli-LyHUYdQ2d2AXPAJaD7chFyvJSTOC-15q9a3B9HHd_9elflPwwdKFg5/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzcpuHowf7NzrC5RkGBBbKE2aTtvZgDLWqpIo2TihbKEeU7naublDvS8FMHWYxBsQx1/exec";
 
     marked.setOptions({ breaks: true, gfm: true });
 
@@ -616,7 +621,7 @@
     let selectedDateStr = formatDate(new Date());
     let currentSlot = "morning";
     let currentViewMode = "calendar";
-    let openedBookTitles = new Set(); // 펼쳐진 도서명 보관
+    let openedBookTitles = new Set();
 
     function formatDate(d) {
       const year = d.getFullYear();
@@ -630,7 +635,6 @@
       return map[slot] || '아침';
     }
 
-    // 마크다운 및 [ ] 굵은 글씨 파싱
     function renderMarkdown(content) {
       if (!content) return '';
       if (Array.isArray(content)) content = content.join('\n');
@@ -678,7 +682,7 @@
       lucide.createIcons();
     }
 
-    // 📚 도서별 목차(챕터) 아코디언 렌더링
+    // 도서별 목차 아코디언 렌더링
     function renderBookTree(query = '') {
       const listContainer = document.getElementById('bookTreeList');
       const booksMap = {};
@@ -772,7 +776,7 @@
       renderBookTree(e.target.value.trim());
     });
 
-    // 뷰 모드 전환 이벤트
+    // 뷰 모드 전환
     const modeCalendarBtn = document.getElementById('modeCalendarBtn');
     const modeBookBtn = document.getElementById('modeBookBtn');
     const calendarSection = document.getElementById('calendarSection');
@@ -796,7 +800,7 @@
       renderBookTree(document.getElementById('bookSearchInput').value.trim());
     });
 
-    // 날짜 및 시간대 선택 통합 함수
+    // 날짜/시간대 선택
     function selectDateAndSlot(dateStr, slot) {
       selectedDateStr = dateStr;
       currentSlot = slot;
@@ -831,7 +835,7 @@
       }
     });
 
-    // 상세 본문 렌더링
+    // 상세 본문 렌더링 (본문 요약 섹션 포함)
     function renderContent(dateStr, slot) {
       const displayArea = document.getElementById('contentDisplayArea');
       const data = bookData[dateStr] && bookData[dateStr][slot];
@@ -861,6 +865,21 @@
           <h2>${escapeHtml(data.chapterTitle)}</h2>
         </div>
         <div class="section-grid">
+          
+          <!-- ✨ 1. 본문 요약 (내용이 있을 때 표시) -->
+          ${data.summary ? `
+          <div class="content-card">
+            <div class="card-header">
+              <div class="icon-wrapper"><i data-lucide="book-text"></i></div>
+              <h3>본문 요약</h3>
+            </div>
+            <div class="notion-rendered-content">
+              ${renderMarkdown(data.summary)}
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- 2. 핵심 인사이트 Top 3 -->
           <div class="content-card">
             <div class="card-header">
               <div class="icon-wrapper"><i data-lucide="lightbulb"></i></div>
@@ -870,6 +889,8 @@
               ${renderMarkdown(data.insights)}
             </div>
           </div>
+
+          <!-- 3. 기억하고 싶은 문장 -->
           <div class="content-card">
             <div class="card-header">
               <div class="icon-wrapper"><i data-lucide="quote"></i></div>
@@ -879,6 +900,8 @@
               ${renderMarkdown(data.quote)}
             </div>
           </div>
+
+          <!-- 4. 실천을 위한 액션 플랜 -->
           <div class="content-card">
             <div class="card-header">
               <div class="icon-wrapper"><i data-lucide="check-circle-2"></i></div>
@@ -947,7 +970,7 @@
       lucide.createIcons();
     }
 
-    // 조회수 증가 비동기 요청
+    // 조회수 증가
     async function incrementViewCount(dateStr, slot) {
       if (!API_URL) return;
 
@@ -999,7 +1022,7 @@
       return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
     }
 
-    // 월 이동
+    // 달 이동
     document.getElementById('prevMonthBtn').addEventListener('click', () => {
       viewDate.setMonth(viewDate.getMonth() - 1);
       renderCalendar();
@@ -1021,9 +1044,10 @@
     function populateModal(dateStr, slot) {
       modalDate.value = dateStr;
       modalSlot.value = slot;
-      const data = (bookData[dateStr] && bookData[dateStr][slot]) || { bookTitle: '', chapterTitle: '', insights: '', quote: '', actions: '' };
+      const data = (bookData[dateStr] && bookData[dateStr][slot]) || { bookTitle: '', chapterTitle: '', summary: '', insights: '', quote: '', actions: '' };
       document.getElementById('bookTitle').value = data.bookTitle || '';
       document.getElementById('chapterTitle').value = data.chapterTitle || '';
+      document.getElementById('summary').value = data.summary || '';
       document.getElementById('insights').value = Array.isArray(data.insights) ? data.insights.join('\n') : (data.insights || '');
       document.getElementById('quote').value = data.quote || '';
       document.getElementById('actions').value = Array.isArray(data.actions) ? data.actions.join('\n') : (data.actions || '');
@@ -1054,6 +1078,7 @@
         timeSlot: modalSlot.value,
         bookTitle: document.getElementById('bookTitle').value.trim(),
         chapterTitle: document.getElementById('chapterTitle').value.trim(),
+        summary: document.getElementById('summary').value.trim(),
         insights: document.getElementById('insights').value.trim(),
         quote: document.getElementById('quote').value.trim(),
         actions: document.getElementById('actions').value.trim()
