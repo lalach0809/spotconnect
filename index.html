@@ -1,325 +1,1091 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpotConnect - 스마트 스탬프 & 쿠폰</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --secondary: #fbbf24;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --text-main: #1e293b;
-            --text-sub: #64748b;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>데일리 북 캘린더 & 라이브러리 (Book Insight)</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Notion Markdown Parsing Library -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-        body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            background-color: var(--bg);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            color: var(--text-main);
-        }
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); line-height: 1.6; padding-bottom: 60px; }
 
-        .container {
-            width: 90%;
-            max-width: 380px;
-            background: var(--card);
-            padding: 2.5rem 1.5rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            position: relative;
-        }
+    header { background: var(--card-bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-container { max-width: 1100px; margin: 0 auto; padding: 0.85rem 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+    
+    /* View Switcher Tabs */
+    .view-switcher {
+      display: flex;
+      background: var(--bg);
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .view-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.9rem;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .view-btn.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
 
-        h1 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.6rem; }
-        p { color: var(--text-sub); font-size: 0.9rem; margin-bottom: 2rem; }
+    .btn-admin { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border: 1px solid var(--border); background: var(--card-bg); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-admin:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
 
-        /* 입력 폼 */
-        input {
-            width: 100%;
-            padding: 14px;
-            margin-top: 10px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border 0.2s;
-        }
-        input:focus { border-color: var(--primary); }
+    .main-container { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; }
 
-        button {
-            width: 100%;
-            padding: 14px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: opacity 0.2s;
-        }
-        button:active { opacity: 0.8; }
+    /* Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
 
-        .toggle-btn {
-            background: none;
-            color: var(--text-sub);
-            font-size: 0.85rem;
-            text-decoration: underline;
-            border: none;
-            margin-top: 10px;
-        }
+    .sidebar-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
 
-        /* 스탬프 그리드 */
-        .stamp-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin: 2rem 0;
-        }
-        .stamp-slot {
-            aspect-ratio: 1;
-            background: #f1f5f9;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            color: #cbd5e1;
-            border: 2px dashed #cbd5e1;
-            font-size: 1.1rem;
-        }
-        .stamp-slot.active {
-            background: var(--secondary);
-            border: none;
-            color: white;
-            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes pop { 0% { transform: scale(0.5); } 100% { transform: scale(1); } }
+    /* Calendar Component */
+    .calendar-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .calendar-header h2 { font-size: 1.15rem; font-weight: 700; }
+    .cal-nav-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+    .cal-nav-btn:hover { background: var(--bg); color: var(--text); }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+    .calendar-day-header {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding-bottom: 0.5rem;
+    }
+    .calendar-day-header.sun { color: #ef4444; }
+    .calendar-day-header.sat { color: #3b82f6; }
 
-        /* 쿠폰 영역 */
-        #couponArea {
-            display: none;
-            margin-top: 20px;
-            padding: 1.2rem;
-            background: #fffbeb;
-            border: 2px solid var(--secondary);
-            border-radius: 16px;
-            animation: slideUp 0.5s ease-out;
-        }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .use-btn {
-            background: var(--secondary);
-            color: #92400e;
-            margin-top: 10px;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+    .cal-cell {
+      height: 42px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      position: relative;
+      transition: all 0.15s;
+    }
+    .cal-cell:hover:not(.empty) { background: var(--primary-light); }
+    .cal-cell.empty { cursor: default; }
+    .cal-cell.selected {
+      background: var(--primary) !important;
+      color: white !important;
+      font-weight: 700;
+    }
+    .cal-cell.has-data::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background-color: #f59e0b;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 4px;
+    }
+    .cal-cell.selected.has-data::after { background-color: #ffffff; }
 
-        /* 로딩 레이어 */
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.85);
-            z-index: 1000;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-        }
+    /* Book Explorer Search Component */
+    .book-search-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 480px;
+      max-height: 75vh;
+      overflow: hidden;
+    }
+    .search-input-box {
+      position: relative;
+      margin-bottom: 0.85rem;
+      flex-shrink: 0;
+    }
+    .search-input-box input {
+      width: 100%;
+      padding: 0.65rem 0.75rem 0.65rem 2.25rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .search-input-box input:focus { border-color: var(--primary); }
+    .search-input-box .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      width: 16px;
+      height: 16px;
+    }
 
-        #authView, #stampView { display: none; }
-    </style>
+    /* Book & Chapter Tree List */
+    .book-tree-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+      overflow-y: scroll !important;
+      overflow-x: hidden;
+      padding-right: 6px;
+      margin: 0;
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .book-tree-list::-webkit-scrollbar { width: 6px; }
+    .book-tree-list::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .book-tree-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .book-tree-list::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .book-group-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--card-bg);
+      flex-shrink: 0;
+    }
+    .book-group-title {
+      background: #f8fafc;
+      padding: 0.75rem 0.85rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .book-group-title:hover { background: #f1f5f9; }
+    .book-group-item.open .book-group-title {
+      border-bottom: 1px solid var(--border);
+      background: #f1f5f9;
+      color: var(--primary);
+    }
+    .book-title-left {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-right: 0.5rem;
+    }
+    .book-title-right {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+    .book-count-badge { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+    .chevron-icon { transition: transform 0.2s ease; color: var(--text-muted); width: 16px; height: 16px; }
+    .book-group-item.open .chevron-icon { transform: rotate(180deg); }
+
+    .chapter-sublist {
+      list-style: none;
+      display: none;
+      flex-direction: column;
+      background: var(--card-bg);
+      margin: 0;
+      padding: 0;
+    }
+    .book-group-item.open .chapter-sublist { display: flex; }
+
+    .chapter-item {
+      padding: 0.6rem 0.85rem 0.6rem 1.1rem;
+      font-size: 0.83rem;
+      border-top: 1px solid #f1f5f9;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s;
+    }
+    .chapter-item:first-child { border-top: none; }
+    .chapter-item:hover { background: var(--primary-light); color: var(--primary); }
+    .chapter-item.selected {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      border-left: 3px solid var(--primary);
+    }
+    .chapter-date-badge { font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0; margin-left: 0.5rem; }
+
+    /* Top 10 Popular List Component */
+    .popular-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .popular-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .popular-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .popular-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      text-decoration: none;
+      color: inherit;
+    }
+    .popular-item:hover { background: var(--primary-light); border-color: #bfdbfe; }
+    .popular-left { display: flex; align-items: flex-start; gap: 0.65rem; overflow: hidden; flex: 1; }
+    .popular-rank { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); width: 18px; text-align: center; flex-shrink: 0; margin-top: 1px; }
+    .popular-item:nth-child(1) .popular-rank { color: #f59e0b; font-size: 1rem; }
+    .popular-item:nth-child(2) .popular-rank { color: #64748b; font-size: 0.95rem; }
+    .popular-item:nth-child(3) .popular-rank { color: #b45309; font-size: 0.9rem; }
+    
+    .popular-title-box { display: flex; flex-direction: column; gap: 0.15rem; overflow: hidden; min-width: 0; }
+    .popular-book-title { font-size: 0.875rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .popular-chapter-title { font-size: 0.8rem; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .popular-meta { font-size: 0.725rem; color: var(--text-muted); display: flex; gap: 0.35rem; align-items: center; margin-top: 0.1rem; }
+    .popular-slot-tag { background: #e2e8f0; color: #475569; padding: 0.05rem 0.35rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; }
+    .popular-views { font-size: 0.75rem; font-weight: 600; color: var(--primary); flex-shrink: 0; margin-left: 0.5rem; display: flex; align-items: center; gap: 0.25rem; margin-top: 2px; }
+
+    /* Time Slot Tabs */
+    .time-slot-nav {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--card-bg);
+      padding: 0.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+    }
+    .slot-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 0.5rem;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .slot-btn:hover { background: var(--bg); color: var(--text); }
+    .slot-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+    }
+
+    /* Content Area */
+    .book-meta-card { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; padding: 1.5rem 1.75rem; border-radius: var(--radius); margin-bottom: 1.5rem; box-shadow: var(--shadow); }
+    .book-meta-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .book-meta-card .day-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .views-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; background: rgba(0, 0, 0, 0.25); padding: 0.25rem 0.65rem; border-radius: 20px; color: #f8fafc; }
+    .book-meta-card h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .book-meta-card h2 { font-size: 1.05rem; font-weight: 400; opacity: 0.9; }
+
+    .section-grid { display: grid; gap: 1.25rem; }
+    .content-card { background: var(--card-bg); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; }
+    .card-header .icon-wrapper { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: var(--primary-light); color: var(--primary); }
+    .card-header h3 { font-size: 1.05rem; font-weight: 700; }
+
+    /* Notion Markdown Styles */
+    .notion-rendered-content { font-size: 0.95rem; line-height: 1.7; color: #334155; }
+    .notion-rendered-content p { margin-bottom: 0.6rem; }
+    .notion-rendered-content p:last-child { margin-bottom: 0; }
+    .notion-rendered-content ul, .notion-rendered-content ol { padding-left: 1.4rem; margin-bottom: 0.6rem; }
+    .notion-rendered-content li { margin-bottom: 0.35rem; }
+    .notion-rendered-content strong { color: #0f172a; font-weight: 700; }
+    .notion-rendered-content code { background: #f1f5f9; color: #e11d48; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.85em; font-family: monospace; }
+    .quote-box { border-left: 4px solid #f59e0b; padding: 0.85rem 1.1rem; background: #fffbeb; border-radius: 0 var(--radius) var(--radius) 0; font-style: italic; color: #78350f; }
+
+    /* Modal Layout */
+    .modal-backdrop { 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(15, 23, 42, 0.6); 
+      display: none; 
+      justify-content: center; 
+      align-items: center; 
+      z-index: 1000; 
+      padding: 1rem; 
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-content { 
+      background: var(--card-bg); 
+      width: 100%; 
+      max-width: 620px; 
+      max-height: 88vh; 
+      border-radius: var(--radius); 
+      display: flex; 
+      flex-direction: column; 
+      overflow: hidden; 
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+    .modal-header { 
+      padding: 1.25rem 1.5rem; 
+      border-bottom: 1px solid var(--border); 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      flex-shrink: 0;
+    }
+    #adminForm { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
+    .modal-body { padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; flex: 1; }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-group label { font-size: 0.85rem; font-weight: 600; }
+    .form-group .hint { font-size: 0.75rem; color: var(--text-muted); margin-top: -2px; }
+    .form-control { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
+    textarea.form-control { min-height: 80px; resize: vertical; font-family: inherit; }
+    
+    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.5rem; background: var(--bg); flex-shrink: 0; }
+    .btn { padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-primary { background: var(--primary); color: white; }
+    .empty-state { text-align: center; padding: 3.5rem 1rem; color: var(--text-muted); }
+
+    @media (max-width: 860px) {
+      .app-layout { grid-template-columns: 1fr; }
+      .header-container { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+      .view-switcher { justify-content: center; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
-<div id="loading" class="loading-overlay">
-    <div>처리 중입니다...</div>
-    <button onclick="showLoading(false)" style="width:auto; padding:5px 10px; font-size:12px; background:#ccc; margin-top:10px;">취소</button>
-</div>
+  <header>
+    <div class="header-container">
+      <div class="logo">
+        <i data-lucide="book-open"></i>
+        <span>BookInsight</span>
+      </div>
 
-<div class="container">
-    <div id="authView" style="display: block;">
-        <h1 id="viewTitle">SpotConnect</h1>
-        <p id="viewDesc">방문 스탬프를 적립하고 혜택을 받으세요</p>
-        <input type="text" id="userId" placeholder="아이디">
-        <input type="password" id="userPw" placeholder="비밀번호">
-        <button onclick="handleAuth()" id="mainBtn">로그인</button>
-        <button class="toggle-btn" onclick="toggleMode()" id="subBtn">계정이 없으신가요? 회원가입</button>
+      <!-- 보기 모드 전환 스위치 -->
+      <div class="view-switcher">
+        <button class="view-btn active" id="modeCalendarBtn">
+          <i data-lucide="calendar" style="width: 15px; height: 15px;"></i>
+          <span>달력별 보기</span>
+        </button>
+        <button class="view-btn" id="modeBookBtn">
+          <i data-lucide="library" style="width: 15px; height: 15px;"></i>
+          <span>도서/목차 검색</span>
+        </button>
+      </div>
+
+      <button class="btn-admin" id="openAdminBtn">
+        <i data-lucide="lock"></i>
+        <span>관리자 등록/수정</span>
+      </button>
     </div>
+  </header>
 
-    <div id="stampView">
-        <h1 style="font-size: 1.3rem;"><span id="userName" style="color:var(--text-main)"></span>님</h1>
-        <p>현재 보유하신 스탬프입니다</p>
+  <main class="main-container">
+    <div class="app-layout">
+      <!-- 좌측 사이드바: 달력 OR 도서 검색 목록 -->
+      <div class="sidebar-wrapper">
         
-        <div class="stamp-grid" id="stampGrid"></div>
+        <!-- [모드 1] 달력 컴포넌트 -->
+        <aside class="calendar-card" id="calendarSection">
+          <div class="calendar-header">
+            <h2 id="calendarTitle">2026년 8월</h2>
+            <div style="display: flex; gap: 0.3rem;">
+              <button class="cal-nav-btn" id="prevMonthBtn"><i data-lucide="chevron-left"></i></button>
+              <button class="cal-nav-btn" id="nextMonthBtn"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="calendar-grid">
+            <div class="calendar-day-header sun">일</div>
+            <div class="calendar-day-header">월</div>
+            <div class="calendar-day-header">화</div>
+            <div class="calendar-day-header">수</div>
+            <div class="calendar-day-header">목</div>
+            <div class="calendar-day-header">금</div>
+            <div class="calendar-day-header sat">토</div>
+          </div>
+          <div class="calendar-grid" id="calendarDays"></div>
+        </aside>
 
-        <div id="couponArea">
-            <strong style="color: #92400e;">🎁 무료 쿠폰이 도착했습니다!</strong>
-            <button onclick="useCoupon()" class="use-btn">아메리카노 쿠폰 사용하기</button>
+        <!-- [모드 2] 도서 및 목차 검색 트리 컴포넌트 -->
+        <aside class="book-search-card" id="bookSearchSection" style="display: none;">
+          <div class="search-input-box">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="bookSearchInput" placeholder="책 제목 또는 챕터 검색..." />
+          </div>
+          <ul class="book-tree-list" id="bookTreeList">
+            <!-- 책 목록 및 아코디언 챕터가 렌더링됩니다 -->
+          </ul>
+        </aside>
+
+        <!-- 인기 글 TOP 10 (공통 노출) -->
+        <aside class="popular-card">
+          <div class="popular-header">
+            <i data-lucide="trending-up" style="width: 18px; height: 18px; color: #f59e0b;"></i>
+            <span>인기 인사이트 TOP 10</span>
+          </div>
+          <ul class="popular-list" id="popularListContainer">
+            <li style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 1rem;">
+              데이터를 집계 중입니다...
+            </li>
+          </ul>
+        </aside>
+      </div>
+
+      <!-- 우측 상세 영역 -->
+      <section>
+        <div class="time-slot-nav" id="timeSlotNav">
+          <button class="slot-btn active" data-slot="morning">
+            <i data-lucide="sunrise" style="width: 18px; height: 18px;"></i>
+            <span>아침</span>
+          </button>
+          <button class="slot-btn" data-slot="lunch">
+            <i data-lucide="sun" style="width: 18px; height: 18px;"></i>
+            <span>점심</span>
+          </button>
+          <button class="slot-btn" data-slot="dinner">
+            <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+            <span>저녁</span>
+          </button>
         </div>
 
-        <div style="background:#eff6ff; padding:15px; border-radius:12px; font-size:0.85rem; color:var(--primary); margin-top:15px;">
-            10개를 모으면 자동으로 쿠폰이 발행됩니다.
-        </div>
-        
-        <button onclick="logout()" style="background:#f1f5f9; color:var(--text-sub); margin-top:20px;">로그아웃</button>
+        <div id="contentDisplayArea"></div>
+      </section>
     </div>
-</div>
+  </main>
 
-<script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwZd5two-qEeiT6JRdbHPOZJx_mxa6ZuglDTAAbJw5cJVyExVvrNAgjWZ12vyrsKW5/exec";
-    let isLoginMode = true;
+  <!-- 관리자 등록/수정 모달 -->
+  <div class="modal-backdrop" id="adminModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-weight: 700;">도서 인사이트 등록/수정</h3>
+        <button id="closeAdminBtn" style="background:none; border:none; cursor:pointer;"><i data-lucide="x"></i></button>
+      </div>
+      <form id="adminForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="adminKey">관리자 비밀번호</label>
+            <input type="password" id="adminKey" class="form-control" placeholder="비밀번호 입력" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modalDate">등록 날짜</label>
+              <input type="date" id="modalDate" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="modalSlot">시간대 선택</label>
+              <select id="modalSlot" class="form-control" required>
+                <option value="morning">🌅 아침</option>
+                <option value="lunch">☀️ 점심</option>
+                <option value="dinner">🌙 저녁</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bookTitle">도서명</label>
+            <input type="text" id="bookTitle" class="form-control" placeholder="도서명 입력" required />
+          </div>
+          <div class="form-group">
+            <label for="chapterTitle">목차 / 챕터명</label>
+            <input type="text" id="chapterTitle" class="form-control" placeholder="목차/챕터명 입력" required />
+          </div>
+          <div class="form-group">
+            <label for="insights">💡 핵심 인사이트 Top 3</label>
+            <span class="hint">* [ ] 안의 단어는 자동으로 굵게 강조됩니다.</span>
+            <textarea id="insights" class="form-control" rows="3" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="quote">✍️ 기억하고 싶은 문장</label>
+            <textarea id="quote" class="form-control" rows="2" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="actions">🎯 실천을 위한 액션 플랜</label>
+            <textarea id="actions" class="form-control" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelModalBtn">취소</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-    // 페이지 로드 시 실행
-    window.onload = async function() {
-        const savedId = localStorage.getItem('spotConnectId');
-        const urlParams = new URLSearchParams(window.location.search);
-        const isScanMode = urlParams.get('mode') === 'scan';
+  <script>
+    // ✅ 설정된 최신 Google Apps Script Web App URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbyOhKtAOqQli-LyHUYdQ2d2AXPAJaD7chFyvJSTOC-15q9a3B9HHd_9elflPwwdKFg5/exec";
 
-        if (savedId) {
-            showStampView(savedId, 0); // 즉시 화면 전환
-            if (isScanMode) await addStamp(savedId);
-            else syncUserInfo(savedId);
-        } else if (isScanMode) {
-            alert("로그인이 필요합니다. 로그인 후 스탬프가 자동 적립됩니다.");
-        }
-    };
+    marked.setOptions({ breaks: true, gfm: true });
 
-    function toggleMode() {
-        isLoginMode = !isLoginMode;
-        document.getElementById('viewTitle').innerText = isLoginMode ? "SpotConnect" : "회원가입";
-        document.getElementById('mainBtn').innerText = isLoginMode ? "로그인" : "가입하기";
-        document.getElementById('subBtn').innerText = isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있나요? 로그인";
+    let bookData = {};
+    let viewDate = new Date();
+    let selectedDateStr = formatDate(new Date());
+    let currentSlot = "morning";
+    let currentViewMode = "calendar";
+    let openedBookTitles = new Set(); // 펼쳐진 도서명 보관
+
+    function formatDate(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
-    async function handleAuth() {
-        const id = document.getElementById('userId').value;
-        const password = document.getElementById('userPw').value;
-        const action = isLoginMode ? "login" : "signup";
+    function getSlotLabel(slot) {
+      const map = { morning: '아침', lunch: '점심', dinner: '저녁' };
+      return map[slot] || '아침';
+    }
 
-        if(!id || !password) return alert("입력란을 모두 채워주세요.");
-        showLoading(true);
+    // 마크다운 및 [ ] 굵은 글씨 파싱
+    function renderMarkdown(content) {
+      if (!content) return '';
+      if (Array.isArray(content)) content = content.join('\n');
+      const processed = content.replace(/\[([^\]\n]+)\](?!\()/g, '<strong>[$1]</strong>');
+      return marked.parse(processed);
+    }
 
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action, id, password })
-            });
-            const data = await response.json();
+    // 달력 렌더링
+    function renderCalendar() {
+      const year = viewDate.getFullYear();
+      const month = viewDate.getMonth();
 
-            if (data.result === "success") {
-                if (isLoginMode) {
-                    localStorage.setItem('spotConnectId', id);
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.get('mode') === 'scan') await addStamp(id);
-                    else {
-                        showStampView(id, data.stamps);
-                        showLoading(false);
-                    }
-                } else {
-                    alert("가입 성공! 로그인을 해주세요.");
-                    toggleMode();
-                    showLoading(false);
-                }
-            } else {
-                alert(data.message || "오류가 발생했습니다.");
-                showLoading(false);
+      document.getElementById('calendarTitle').innerText = `${year}년 ${month + 1}월`;
+
+      const firstDayIndex = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+
+      const daysContainer = document.getElementById('calendarDays');
+      daysContainer.innerHTML = '';
+
+      for (let i = 0; i < firstDayIndex; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'cal-cell empty';
+        daysContainer.appendChild(emptyCell);
+      }
+
+      for (let day = 1; day <= lastDate; day++) {
+        const cellDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell';
+        cell.innerText = day;
+
+        if (cellDate === selectedDateStr) cell.classList.add('selected');
+
+        const dayEntries = bookData[cellDate];
+        const hasAnyContent = dayEntries && Object.values(dayEntries).some(slot => slot && slot.bookTitle);
+        if (hasAnyContent) cell.classList.add('has-data');
+
+        cell.addEventListener('click', () => {
+          selectDateAndSlot(cellDate, currentSlot);
+        });
+
+        daysContainer.appendChild(cell);
+      }
+      lucide.createIcons();
+    }
+
+    // 📚 도서별 목차(챕터) 아코디언 렌더링
+    function renderBookTree(query = '') {
+      const listContainer = document.getElementById('bookTreeList');
+      const booksMap = {};
+
+      Object.entries(bookData).forEach(([date, slots]) => {
+        if (!slots) return;
+        Object.entries(slots).forEach(([slotKey, item]) => {
+          if (item && item.bookTitle) {
+            const title = item.bookTitle.trim();
+            if (!booksMap[title]) {
+              booksMap[title] = [];
             }
-        } catch (e) {
-            alert("연동 오류가 발생했습니다.");
-            showLoading(false);
-        }
+            booksMap[title].push({
+              date,
+              slot: slotKey,
+              chapterTitle: item.chapterTitle || '목차 없음',
+              views: item.views || 0
+            });
+          }
+        });
+      });
+
+      const bookTitles = Object.keys(booksMap);
+      const filteredTitles = bookTitles.filter(title => {
+        if (!query) return true;
+        const q = query.toLowerCase();
+        const matchTitle = title.toLowerCase().includes(q);
+        const matchChapter = booksMap[title].some(c => c.chapterTitle.toLowerCase().includes(q));
+        return matchTitle || matchChapter;
+      });
+
+      if (filteredTitles.length === 0) {
+        listContainer.innerHTML = `
+          <li style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 2rem 1rem;">
+            ${query ? '검색 결과와 일치하는 도서가 없습니다.' : '등록된 도서가 없습니다.'}
+          </li>
+        `;
+        return;
+      }
+
+      if (query) {
+        filteredTitles.forEach(t => openedBookTitles.add(t));
+      }
+
+      listContainer.innerHTML = filteredTitles.map(title => {
+        const chapters = booksMap[title];
+        const isOpen = openedBookTitles.has(title);
+
+        return `
+          <li class="book-group-item ${isOpen ? 'open' : ''}">
+            <div class="book-group-title" onclick="toggleBookAccordion('${escapeHtml(title).replace(/'/g, "\\'")}')">
+              <div class="book-title-left">
+                <i data-lucide="book" style="width: 16px; height: 16px; color: var(--primary); flex-shrink: 0;"></i>
+                <span title="${escapeHtml(title)}">${escapeHtml(title)}</span>
+              </div>
+              <div class="book-title-right">
+                <span class="book-count-badge">${chapters.length}개 챕터</span>
+                <i data-lucide="chevron-down" class="chevron-icon"></i>
+              </div>
+            </div>
+            <ul class="chapter-sublist">
+              ${chapters.map(ch => {
+                const isSelected = (selectedDateStr === ch.date && currentSlot === ch.slot);
+                return `
+                  <li class="chapter-item ${isSelected ? 'selected' : ''}" onclick="selectDateAndSlot('${ch.date}', '${ch.slot}')">
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(ch.chapterTitle)}">
+                      ${escapeHtml(ch.chapterTitle)}
+                    </span>
+                    <span class="chapter-date-badge">${ch.date} [${getSlotLabel(ch.slot)}]</span>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          </li>
+        `;
+      }).join('');
+
+      lucide.createIcons();
     }
 
-    async function addStamp(id) {
-        showLoading(true);
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "addStamp", id: id })
-            });
-            const data = await response.json();
-            if (data.result === "success") {
-                alert("🎉 방문 스탬프가 적립되었습니다!");
-                showStampView(id, data.stamps);
+    function toggleBookAccordion(title) {
+      if (openedBookTitles.has(title)) {
+        openedBookTitles.delete(title);
+      } else {
+        openedBookTitles.add(title);
+      }
+      renderBookTree(document.getElementById('bookSearchInput').value.trim());
+    }
+
+    document.getElementById('bookSearchInput').addEventListener('input', (e) => {
+      renderBookTree(e.target.value.trim());
+    });
+
+    // 뷰 모드 전환 이벤트
+    const modeCalendarBtn = document.getElementById('modeCalendarBtn');
+    const modeBookBtn = document.getElementById('modeBookBtn');
+    const calendarSection = document.getElementById('calendarSection');
+    const bookSearchSection = document.getElementById('bookSearchSection');
+
+    modeCalendarBtn.addEventListener('click', () => {
+      currentViewMode = 'calendar';
+      modeCalendarBtn.classList.add('active');
+      modeBookBtn.classList.remove('active');
+      calendarSection.style.display = 'block';
+      bookSearchSection.style.display = 'none';
+      renderCalendar();
+    });
+
+    modeBookBtn.addEventListener('click', () => {
+      currentViewMode = 'book';
+      modeBookBtn.classList.add('active');
+      modeCalendarBtn.classList.remove('active');
+      calendarSection.style.display = 'none';
+      bookSearchSection.style.display = 'flex';
+      renderBookTree(document.getElementById('bookSearchInput').value.trim());
+    });
+
+    // 날짜 및 시간대 선택 통합 함수
+    function selectDateAndSlot(dateStr, slot) {
+      selectedDateStr = dateStr;
+      currentSlot = slot;
+
+      document.querySelectorAll('.slot-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.slot === currentSlot);
+      });
+
+      const [y, m] = dateStr.split('-').map(Number);
+      if (viewDate.getFullYear() !== y || viewDate.getMonth() !== (m - 1)) {
+        viewDate = new Date(y, m - 1, 1);
+      }
+
+      if (currentViewMode === 'calendar') {
+        renderCalendar();
+      } else {
+        renderBookTree(document.getElementById('bookSearchInput').value.trim());
+      }
+
+      renderContent(selectedDateStr, currentSlot);
+
+      const targetData = bookData[dateStr] && bookData[dateStr][slot];
+      if (targetData && targetData.bookTitle) {
+        incrementViewCount(dateStr, slot);
+      }
+    }
+
+    document.getElementById('timeSlotNav').addEventListener('click', (e) => {
+      const btn = e.target.closest('.slot-btn');
+      if (btn) {
+        selectDateAndSlot(selectedDateStr, btn.dataset.slot);
+      }
+    });
+
+    // 상세 본문 렌더링
+    function renderContent(dateStr, slot) {
+      const displayArea = document.getElementById('contentDisplayArea');
+      const data = bookData[dateStr] && bookData[dateStr][slot];
+
+      if (!data || !data.bookTitle) {
+        displayArea.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="calendar-x" style="width: 44px; height: 44px; margin-bottom: 1rem; color: #94a3b8;"></i>
+            <h3>${dateStr} [${getSlotLabel(slot)}]에 등록된 도서 요약이 없습니다.</h3>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">관리자 등록/수정 버튼을 통해 내용을 기록해보세요.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      displayArea.innerHTML = `
+        <div class="book-meta-card">
+          <div class="book-meta-top">
+            <span class="day-badge">${dateStr} · ${getSlotLabel(slot)} 인사이트</span>
+            <span class="views-badge" id="viewCountBadge">
+              <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+              <span>조회수 ${(data.views || 0).toLocaleString()}회</span>
+            </span>
+          </div>
+          <h1>${escapeHtml(data.bookTitle)}</h1>
+          <h2>${escapeHtml(data.chapterTitle)}</h2>
+        </div>
+        <div class="section-grid">
+          <div class="content-card">
+            <div class="card-header">
+              <div class="icon-wrapper"><i data-lucide="lightbulb"></i></div>
+              <h3>핵심 인사이트 Top 3</h3>
+            </div>
+            <div class="notion-rendered-content">
+              ${renderMarkdown(data.insights)}
+            </div>
+          </div>
+          <div class="content-card">
+            <div class="card-header">
+              <div class="icon-wrapper"><i data-lucide="quote"></i></div>
+              <h3>기억하고 싶은 문장</h3>
+            </div>
+            <div class="quote-box notion-rendered-content">
+              ${renderMarkdown(data.quote)}
+            </div>
+          </div>
+          <div class="content-card">
+            <div class="card-header">
+              <div class="icon-wrapper"><i data-lucide="check-circle-2"></i></div>
+              <h3>실천을 위한 액션 플랜</h3>
+            </div>
+            <div class="notion-rendered-content">
+              ${renderMarkdown(data.actions)}
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // 🏆 인기글 TOP 10 렌더링
+    function renderPopularList() {
+      const container = document.getElementById('popularListContainer');
+      const allPosts = [];
+
+      Object.entries(bookData).forEach(([date, slots]) => {
+        if (slots) {
+          Object.entries(slots).forEach(([slotKey, item]) => {
+            if (item && item.bookTitle) {
+              allPosts.push({
+                date,
+                slot: slotKey,
+                ...item
+              });
             }
-        } finally {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            showLoading(false);
+          });
         }
+      });
+
+      allPosts.sort((a, b) => (b.views || 0) - (a.views || 0));
+      const top10 = allPosts.slice(0, 10);
+
+      if (top10.length === 0) {
+        container.innerHTML = `
+          <li style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 1rem;">
+            등록된 글이 없습니다.
+          </li>
+        `;
+        return;
+      }
+
+      container.innerHTML = top10.map((item, index) => `
+        <li class="popular-item" onclick="selectDateAndSlot('${item.date}', '${item.slot}')">
+          <div class="popular-left">
+            <span class="popular-rank">${index + 1}</span>
+            <div class="popular-title-box">
+              <span class="popular-book-title">${escapeHtml(item.bookTitle)}</span>
+              ${item.chapterTitle ? `<span class="popular-chapter-title">${escapeHtml(item.chapterTitle)}</span>` : ''}
+              <span class="popular-meta">
+                <span>${item.date}</span>
+                <span class="popular-slot-tag">${getSlotLabel(item.slot)}</span>
+              </span>
+            </div>
+          </div>
+          <span class="popular-views">
+            <i data-lucide="eye" style="width: 12px; height: 12px;"></i>
+            ${(item.views || 0).toLocaleString()}
+          </span>
+        </li>
+      `).join('');
+
+      lucide.createIcons();
     }
 
-    async function useCoupon() {
-        if (!confirm("직원에게 화면을 보여주셨나요?\n사용 후에는 스탬프 10개가 차감됩니다.")) return;
-        
-        const id = localStorage.getItem('spotConnectId');
-        showLoading(true);
+    // 조회수 증가 비동기 요청
+    async function incrementViewCount(dateStr, slot) {
+      if (!API_URL) return;
 
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "useCoupon", id: id })
-            });
-            const data = await response.json();
-            if (data.result === "success") {
-                alert("✅ 쿠폰 사용이 완료되었습니다!");
-                updateStampGrid(data.stamps);
-            } else {
-                alert(data.message);
-            }
-        } finally {
-            showLoading(false);
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "incrementView", date: dateStr, timeSlot: slot })
+        });
+        const result = await res.json();
+        if (result.success && typeof result.views !== 'undefined') {
+          if (bookData[dateStr] && bookData[dateStr][slot]) {
+            bookData[dateStr][slot].views = result.views;
+          }
+          
+          const badge = document.getElementById('viewCountBadge');
+          if (badge && selectedDateStr === dateStr && currentSlot === slot) {
+            badge.innerHTML = `<i data-lucide="eye" style="width: 14px; height: 14px;"></i><span>조회수 ${result.views.toLocaleString()}회</span>`;
+            lucide.createIcons();
+          }
+
+          renderPopularList();
         }
+      } catch (e) {
+        console.error("조회수 증가 실패:", e);
+      }
     }
 
-    async function syncUserInfo(id) {
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "login", id: id, password: "" })
-            });
-            const data = await response.json();
-            if (data.result === "success") updateStampGrid(data.stamps);
-        } catch (e) {}
-    }
+    // 전체 데이터 조회
+    async function fetchData() {
+      try {
+        const res = await fetch(API_URL);
+        bookData = await res.json();
+        renderCalendar();
+        renderBookTree();
+        renderPopularList();
+        renderContent(selectedDateStr, currentSlot);
 
-    function showStampView(id, stamps) {
-        document.getElementById('authView').style.display = 'none';
-        document.getElementById('stampView').style.display = 'block';
-        document.getElementById('userName').innerText = id;
-        updateStampGrid(stamps);
-    }
-
-    function updateStampGrid(stamps) {
-        const grid = document.getElementById('stampGrid');
-        const couponArea = document.getElementById('couponArea');
-        grid.innerHTML = "";
-        for(let i = 1; i <= 10; i++) {
-            const slot = document.createElement('div');
-            slot.className = `stamp-slot ${i <= stamps ? 'active' : ''}`;
-            slot.innerText = i <= stamps ? "✓" : i;
-            grid.appendChild(slot);
+        const targetData = bookData[selectedDateStr] && bookData[selectedDateStr][currentSlot];
+        if (targetData && targetData.bookTitle) {
+          incrementViewCount(selectedDateStr, currentSlot);
         }
-        couponArea.style.display = (stamps >= 10) ? 'block' : 'none';
+      } catch (err) {
+        console.error("데이터 로드 실패:", err);
+      }
     }
 
-    function logout() {
-        localStorage.removeItem('spotConnectId');
-        window.location.href = window.location.origin + window.location.pathname;
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
     }
 
-    function showLoading(show) {
-        document.getElementById('loading').style.display = show ? 'flex' : 'none';
-    }
-</script>
+    // 월 이동
+    document.getElementById('prevMonthBtn').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() - 1);
+      renderCalendar();
+    });
+    document.getElementById('nextMonthBtn').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() + 1);
+      renderCalendar();
+    });
 
+    // 관리자 모달
+    const modal = document.getElementById('adminModal');
+    const openBtn = document.getElementById('openAdminBtn');
+    const closeBtn = document.getElementById('closeAdminBtn');
+    const cancelBtn = document.getElementById('cancelModalBtn');
+    const modalDate = document.getElementById('modalDate');
+    const modalSlot = document.getElementById('modalSlot');
+    const form = document.getElementById('adminForm');
+
+    function populateModal(dateStr, slot) {
+      modalDate.value = dateStr;
+      modalSlot.value = slot;
+      const data = (bookData[dateStr] && bookData[dateStr][slot]) || { bookTitle: '', chapterTitle: '', insights: '', quote: '', actions: '' };
+      document.getElementById('bookTitle').value = data.bookTitle || '';
+      document.getElementById('chapterTitle').value = data.chapterTitle || '';
+      document.getElementById('insights').value = Array.isArray(data.insights) ? data.insights.join('\n') : (data.insights || '');
+      document.getElementById('quote').value = data.quote || '';
+      document.getElementById('actions').value = Array.isArray(data.actions) ? data.actions.join('\n') : (data.actions || '');
+    }
+
+    openBtn.addEventListener('click', () => {
+      populateModal(selectedDateStr, currentSlot);
+      modal.classList.add('open');
+    });
+
+    modalDate.addEventListener('change', () => populateModal(modalDate.value, modalSlot.value));
+    modalSlot.addEventListener('change', () => populateModal(modalDate.value, modalSlot.value));
+
+    const closeModal = () => modal.classList.remove('open');
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    // 저장 처리
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.innerText = "저장 중...";
+      submitBtn.disabled = true;
+
+      const payload = {
+        adminKey: document.getElementById('adminKey').value,
+        date: modalDate.value,
+        timeSlot: modalSlot.value,
+        bookTitle: document.getElementById('bookTitle').value.trim(),
+        chapterTitle: document.getElementById('chapterTitle').value.trim(),
+        insights: document.getElementById('insights').value.trim(),
+        quote: document.getElementById('quote').value.trim(),
+        actions: document.getElementById('actions').value.trim()
+      };
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          alert("성공적으로 저장되었습니다.");
+          closeModal();
+          await fetchData();
+          selectDateAndSlot(payload.date, payload.timeSlot);
+        } else {
+          alert("저장 실패: " + (result.message || "오류가 발생했습니다."));
+        }
+      } catch (err) {
+        alert("오류 발생: " + err.toString());
+      } finally {
+        submitBtn.innerText = "저장하기";
+        submitBtn.disabled = false;
+      }
+    });
+
+    // 시작
+    renderCalendar();
+    renderContent(selectedDateStr, currentSlot);
+    fetchData();
+  </script>
 </body>
 </html>
